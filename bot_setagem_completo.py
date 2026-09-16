@@ -342,7 +342,8 @@ class AprovarButton(Button):
         e.add_field(name="📋 PROTOCOLO",value=f"`{prot}`",inline=True)
         e.add_field(name="🏷️ NICKNAME",value=f"`{nickname_para(membro,cargo,nome,id_rp)}`",inline=False)
         e.set_thumbnail(url=membro.display_avatar.url)
-        await enviar(interaction.guild,CANAL_SETAGEM_ID,e)
+        # A aprovação é registrada somente no canal de LOG.
+        # O canal de SETAGEM fica reservado para o painel fixo.
         await log(interaction.guild,e)
 
         for x in self.view.children: x.disabled=True
@@ -474,20 +475,10 @@ async def enviar_painel_setagem(guild):
         return False
 
 
-@bot.tree.command(name="setagem", description="Abre o painel de setagem.")
+@bot.tree.command(name="setagem", description="Abre o formulário de setagem.")
 async def setagem(interaction):
-    # TODOS podem pedir SET.
-    await interaction.response.send_message(
-        embed=img(
-            embed_base(
-                "G.O.T DALLAS CITY • SETAGEM",
-                "Clique em **INICIAR SET** para abrir o formulário."
-            ),
-            IMAGEM_SETAGEM
-        ),
-        view=PainelAcaoView(),
-        ephemeral=True
-    )
+    # TODOS podem solicitar SET. Não existe verificação de cargo aqui.
+    await interaction.response.send_modal(SetagemModal())
 
 
 @bot.tree.command(
