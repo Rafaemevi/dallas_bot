@@ -410,33 +410,24 @@ class IniciarSetagemButton(Button):
 
 
 class PainelFixoView(View):
-    """Botão permanente do painel de setagem."""
+    """Painel permanente: qualquer pessoa no canal pode iniciar a setagem."""
     def __init__(self):
         super().__init__(timeout=None)
-        self.add_item(PainelFixoSetagemButton())
+        self.add_item(IniciarSetagemPublicoButton())
 
 
-class PainelFixoSetagemButton(Button):
+class IniciarSetagemPublicoButton(Button):
     def __init__(self):
         super().__init__(
-            label="SETAGEM",
+            label="INICIAR SET",
             emoji="🦉",
-            style=discord.ButtonStyle.secondary,
-            custom_id="got:fixo:setagem"
+            style=discord.ButtonStyle.success,
+            custom_id="got:fixo:iniciar_setagem"
         )
 
     async def callback(self, interaction):
-        await interaction.response.send_message(
-            embed=img(
-                embed_base(
-                    "G.O.T DALLAS CITY • SETAGEM",
-                    "Clique no botão abaixo para abrir o formulário de setagem."
-                ),
-                IMAGEM_SETAGEM
-            ),
-            view=PainelAcaoView(),
-            ephemeral=True
-        )
+        # O painel é público e qualquer membro pode abrir o formulário.
+        await interaction.response.send_modal(SetagemModal())
 
 
 def criar_embed_painel_setagem():
@@ -499,7 +490,7 @@ async def setagem(interaction):
 )
 async def instalar_setagem(interaction):
     # Apenas Recrutador ou superior pode instalar o painel.
-    if not pode_usar(interaction.user, "historico"):
+    if not pode_aprovar_setagem(interaction.user):
         await interaction.response.send_message(
             "❌ Apenas Recrutador ou superior pode instalar o painel.",
             ephemeral=True
