@@ -57,7 +57,8 @@ PREFIXOS = {
 
 # ========================= IMAGENS =========================
 IMAGEM_PAINEL = "https://cdn.discordapp.com/attachments/1549563963862163497/1549574008905924678/content.png?ex=6aab30c1&is=6aa9df41&hm=c0a24f3fb007641c480929433c676e41771a0e524ed3aad4cb995f1ac3370210&"
-IMAGEM_SETAGEM = "https://cdn.discordapp.com/attachments/1549563963862163497/1549571790525829221/content.png?ex=6aab2eb0&is=6aa9dd30&hm=48f321759c2ad0128e3ff268cb06a9b91f9768f01ca0940b77e952743599918f&"
+SETAGEM_BANNER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "setagem_banner.jpg")
+IMAGEM_SETAGEM = ""
 IMAGEM_PROMOCAO = "https://cdn.discordapp.com/attachments/1549563963862163497/1549571893604913332/content.png?ex=6aab2ec9&is=6aa9dd49&hm=35c383b29b39944235a5807a9bc7fbb412ebca2b87fee31c1f019cc45d862dbe&"
 IMAGEM_ADVERTENCIA = "https://cdn.discordapp.com/attachments/1549563963862163497/1549572163055386758/content.png?ex=6aab2f09&is=6aa9dd89&hm=4928e6231b8178859e99d7677094a64cd42a9812b4bfb706d89b291a05891d07&"
 IMAGEM_EXONERACAO = "https://cdn.discordapp.com/attachments/1549563963862163497/1549572534385508415/content.png?ex=6aab2f61&is=6aa9dde1&hm=b7e8b1fbb3583290c4e8e0af4e739217124665fc45df9d26fc2558ea000f4633&"
@@ -432,48 +433,62 @@ class IniciarSetagemPublicoButton(Button):
 
 
 def criar_embed_painel_setagem():
-    e = img(
-        embed_base(
-            "G.O.T DALLAS CITY • SETAGEM",
-            "Preencha o formulário para solicitar sua setagem.",
-            discord.Color.from_rgb(100, 85, 65)
-        ),
-        IMAGEM_SETAGEM
+    e = embed_base(
+        "G.O.T DALLAS CITY • SETAGEM",
+        "Preencha o formulário para solicitar sua setagem."
     )
     e.add_field(
         name="COMO FUNCIONA",
-        value="Clique em **SETAGEM** e preencha Nome RP, ID da cidade e Recrutador.",
+        value="Clique em **INICIAR SET** e preencha Nome RP, ID da cidade e Recrutador.",
         inline=False
     )
+    e.set_image(url="attachment://setagem_banner.jpg")
     return e
 
 
 async def enviar_painel_setagem(guild):
     canal = guild.get_channel(CANAL_SETAGEM_ID)
-    if canal is None:
-        try:
-            canal = await guild.fetch_channel(CANAL_SETAGEM_ID)
-        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-            return False
+    if not canal:
+        return None
 
-    if getattr(canal, "guild", None) and canal.guild.id != guild.id:
-        return False
+    if not os.path.exists(SETAGEM_BANNER_PATH):
+        raise FileNotFoundError(
+            f"Arquivo da imagem do painel não encontrado: {SETAGEM_BANNER_PATH}"
+        )
+
+    # Remove painéis antigos do próprio bot para não deixar imagens quebradas/duplicadas.
+    try:
+        async for msg in canal.history(limit=100):
+            if msg.author.id == bot.user.id and msg.embeds:
+                titulo = msg.embeds[0].title or ""
+                if titulo == "G.O.T DALLAS CITY • SETAGEM":
+                    try:
+                        if msg.pinned:
+                            await msg.unpin(reason="Substituição do painel antigo de SETAGEM")
+                    except (discord.Forbidden, discord.HTTPException):
+                        pass
+                    try:
+                        await msg.delete()
+                    except (discord.Forbidden, discord.HTTPException):
+                        pass
+    except (discord.Forbidden, discord.HTTPException):
+        pass
+
+    arquivo = discord.File(SETAGEM_BANNER_PATH, filename="setagem_banner.jpg")
+    mensagem = await canal.send(
+        embed=criar_embed_painel_setagem(),
+        view=PainelFixoView(),
+        file=arquivo
+    )
 
     try:
-        mensagem = await canal.send(
-            embed=criar_embed_painel_setagem(),
-            view=PainelFixoView()
-        )
-        # Fixa a mensagem no canal para ficar sempre fácil de encontrar.
-        try:
-            await mensagem.pin(reason="Painel fixo de SETAGEM - G.O.T DALLAS CITY")
-        except (discord.Forbidden, discord.HTTPException):
-            # Se o bot não tiver permissão de fixar, o painel continua público e permanente.
-            pass
-        return True
-    except (discord.Forbidden, discord.HTTPException):
-        return False
+        await mensagem.pin(reason="Painel fixo de SETAGEM G.O.T DALLAS CITY")
+    except discord.Forbidden:
+        pass
+    except discord.HTTPException:
+        pass
 
+    return mensagem
 
 @bot.tree.command(name="setagem", description="Abre o formulário de setagem.")
 async def setagem(interaction):
