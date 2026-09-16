@@ -459,10 +459,16 @@ async def enviar_painel_setagem(guild):
         return False
 
     try:
-        await canal.send(
+        mensagem = await canal.send(
             embed=criar_embed_painel_setagem(),
             view=PainelFixoView()
         )
+        # Fixa a mensagem no canal para ficar sempre fácil de encontrar.
+        try:
+            await mensagem.pin(reason="Painel fixo de SETAGEM - G.O.T DALLAS CITY")
+        except (discord.Forbidden, discord.HTTPException):
+            # Se o bot não tiver permissão de fixar, o painel continua público e permanente.
+            pass
         return True
     except (discord.Forbidden, discord.HTTPException):
         return False
